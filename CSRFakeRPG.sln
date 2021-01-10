@@ -6,6 +6,8 @@ VisualStudioVersion = 12.0.20827.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LevelStatusUp", "LevelStatusUp\LevelStatusUp.csproj", "{B62F13E6-6AEB-4392-8CEE-ECDE16F39D94}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomSkillUp", "RandomSkillUp\RandomSkillUp.csproj", "{A77FC788-BB1D-454C-9365-4AA94EE99D02}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,5 +18,9 @@ Global
 		{B62F13E6-6AEB-4392-8CEE-ECDE16F39D94}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B62F13E6-6AEB-4392-8CEE-ECDE16F39D94}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B62F13E6-6AEB-4392-8CEE-ECDE16F39D94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A77FC788-BB1D-454C-9365-4AA94EE99D02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A77FC788-BB1D-454C-9365-4AA94EE99D02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A77FC788-BB1D-454C-9365-4AA94EE99D02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A77FC788-BB1D-454C-9365-4AA94EE99D02}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
