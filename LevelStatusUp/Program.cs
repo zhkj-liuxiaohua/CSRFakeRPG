@@ -21,11 +21,11 @@ namespace LevelStatusUp
 	/// </summary>
 	static class Program
 	{
-		const string CONFIG_DIR = @"CSR\FakeRPG";
-		const string CONFIG_PATH = @"CSR\FakeRPG\config.json";
+		const string CONFIG_DIR = @"plugins\FakeRPG";
+		const string CONFIG_PATH = @"plugins\FakeRPG\config.json";
 		const string PLUGIN_NAME = "LevelStatusUp";
-		const string USERDATA_DIR = @"CSR\FakeRPG\save";
-		const string USERDATA_PATH = @"CSR\FakeRPG\save\_LEVEL_STATUS.json";
+		const string USERDATA_DIR = @"plugins\FakeRPG\save";
+		const string USERDATA_PATH = @"plugins\FakeRPG\save\_LEVEL_STATUS.json";
 		
 		static MCCSAPI mapi;
 		

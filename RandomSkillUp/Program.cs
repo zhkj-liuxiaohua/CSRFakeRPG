@@ -24,11 +24,11 @@ namespace RandomSkillUp
 	/// </summary>
 	static class Program
 	{
-		const string CONFIG_DIR = @"CSR\FakeRPG";
-		const string CONFIG_PATH = @"CSR\FakeRPG\rsconfig.json";
+		const string CONFIG_DIR = @"plugins\FakeRPG";
+		const string CONFIG_PATH = @"plugins\FakeRPG\rsconfig.json";
 		const string PLUGIN_NAME = "RandomSkillUp";
-		const string USERDATA_DIR = @"CSR\FakeRPG\save";
-		const string USERDATA_PATH = @"CSR\FakeRPG\save\_RANDSKILL_MAXID.txt";
+		const string USERDATA_DIR = @"plugins\FakeRPG\save";
+		const string USERDATA_PATH = @"plugins\FakeRPG\save\_RANDSKILL_MAXID.txt";
 		
 		static MCCSAPI mapi;
 		static readonly JavaScriptSerializer ser = new JavaScriptSerializer();

@@ -31,44 +31,12 @@ namespace RandomSkillUp
 		public AtkSkillAdapter(MCCSAPI api, ArrayList skills)
 		{
 			mapi = api;
-			skilllist = skills;
-		}
-		
-		private KeyValuePair<int, int> [] makeRandList() {
-			ArrayList al = new ArrayList(skilllist);
-			ArrayList indexs = new ArrayList();
-			ArrayList pers = new ArrayList();
-			r = r ?? new Random();
-			for(int l = skilllist.Count; l > 0; --l) {
-				int d = r.Next(0, l);
-				indexs.Add(al[d]);
-				al.RemoveAt(d);
+			skilllist = new ArrayList();
+			if (skills != null && skills.Count > 0) {
+				foreach(object k in skills) {
+					skilllist.Add(ser.Deserialize<Skill>(ser.Serialize(k)));
+				}
 			}
-			int per = 101;
-			int i = 0, len = indexs.Count;
-			// 前len-1项为随机值，最后一项为剩余点数
-			for(; i < len - 1; i++) {
-				int iper = r.Next(0, per);
-				int index = skilllist.IndexOf(indexs[i]);
-				pers.Add(new KeyValuePair<int, int>(index, iper));
-				per -= iper;
-			}
-			per -= 1;
-			per = (per < 0) ? 0 : per;
-			pers.Add(new KeyValuePair<int, int>(skilllist.IndexOf(indexs[i]), per));
-			return (KeyValuePair<int, int> [])pers.ToArray(typeof(KeyValuePair<int, int> []));
-		}
-		private int getSkillFromRandList() {
-			var perlst = makeRandList();
-			Random r = new Random();
-			int nr = r.Next(0, 101);
-			int index = -1;
-			do {
-				++index;
-				nr -= perlst[index].Value;
-			} while(nr > 0 && index < perlst.Length);
-			index -= (index == perlst.Length ? 1 : 0);
-			return index;
 		}
 		
 		private bool addOne(ArrayList a, object b) {
