@@ -363,6 +363,22 @@ namespace RandomSkillUp
 			return null;
 		}
 		
+		static Hashtable itemnames = new Hashtable();
+		// 反查物品id-标识符对应表
+		public static string getItemRName(int id) {
+			string rname = itemnames[id] as string;
+			if (string.IsNullOrEmpty(rname)) {
+				rname = mapi.getItemRawname(id);
+				itemnames[id] = rname;
+				return rname;
+			}
+			return rname;
+		}
+		
+		readonly static ArrayList SWORDSLIST = new ArrayList(new []{"wooden_sword", "stone_sword", "iron_sword",
+			"golden_sword", "diamond_sword", "netherite_sword"});
+		readonly static ArrayList TXTSWORDS = new ArrayList(new []{"木剑", "石剑", "铁剑", "金剑", "钻石剑", "合金剑"});
+		
 		// 主程序入口从此进入
 		public static void init(MCCSAPI api){
 			fakeMaxId = FakeCurId;
@@ -400,7 +416,7 @@ namespace RandomSkillUp
 			api.addBeforeActListener(EventKey.onUseItem, x => {
 			                         	var e = BaseEvent.getFrom(x) as UseItemEvent;
 			                         	if (e != null) {
-			                         		if (e.itemid == 385) {		 // 此ID可能会变动
+			                         		if (getItemRName(e.itemid) == "book") {		 // 此ID可能会变动
 			                         			var p = new CsPlayer(api, e.playerPtr);
 			                         			var uuid = p.Uuid;
 			                         			// 检查书本是否是赋予之书
@@ -415,9 +431,6 @@ namespace RandomSkillUp
 			                         			if (tagged) {
 			                         				if (lockUse(e.playerPtr)) {
 			                         					// 弹窗GUI
-			                         					var swords = new ArrayList(new []{"wooden_sword", "stone_sword", "iron_sword",
-			                         					                           	"golden_sword", "diamond_sword", "netherite_sword"});
-			                         					var txtswords = new ArrayList(new []{"木剑", "石剑", "铁剑", "金剑", "钻石剑", "合金剑"});
 			                         					var bts = new ArrayList();
 			                         					var slots = new ArrayList();
 			                         					try {
@@ -432,11 +445,11 @@ namespace RandomSkillUp
 			                         									rawname = orawname as string;
 			                         								}
 			                         								if (!string.IsNullOrEmpty(rawname)) {
-			                         									int index = swords.IndexOf(rawname);
+			                         									int index = SWORDSLIST.IndexOf(rawname);
 			                         									if (index >= 0) {
 			                         										var slot = Convert.ToInt32(d["Slot"]);
 			                         										var bt = string.Format("{0}、 {1}({2})", slot, d["item"] as string,
-			                         										                       txtswords[index]);
+			                         										                       TXTSWORDS[index]);
 			                         										bts.Add(bt);
 			                         										slots.Add(slot);
 			                         									}
@@ -475,7 +488,7 @@ namespace RandomSkillUp
 			                        				var uuid = p.Uuid;
 			                        				var id = e.itemid;
 			                        				// 剑，ID可能会变化
-			                        				if (id == 308 || id == 312 || id == 307 || id == 322 || id == 316 || id == 592) {
+			                        				if (SWORDSLIST.IndexOf(getItemRName(id)) >= 0) {
 			                        					var str = api.getPlayerSelectedItem(uuid);
 			                        					try {
 			                        						var curitem = ser.Deserialize<Dictionary<string, object>>(str);
@@ -504,7 +517,7 @@ namespace RandomSkillUp
 							object oid;
 							if (mainhand.TryGetValue("id", out oid)) {
 								int id = Convert.ToInt32(oid);		// 剑，ID可能会变化
-								if (id == 308 || id == 312 || id == 307 || id == 322 || id == 316 || id == 592) {
+								if (SWORDSLIST.IndexOf(getItemRName(id)) >= 0) {
 									var str = api.getPlayerSelectedItem(uuid);
 									try {
 										var curitem = ser.Deserialize<Dictionary<string, object>>(str);
