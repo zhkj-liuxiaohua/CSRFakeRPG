@@ -27,6 +27,7 @@ namespace RandomSkillUp
 		ArrayList skilllist;
 		readonly JavaScriptSerializer ser = new JavaScriptSerializer();
 		Random r;
+		Hashtable skillDelaysTimer = new Hashtable();
 		
 		public AtkSkillAdapter(MCCSAPI api, ArrayList skills)
 		{
@@ -122,7 +123,11 @@ namespace RandomSkillUp
 			if (!isdamage)	// 反向伤害，治疗
 				recoverHealth(a, count);
 			else
-				a.hurt(p, ActorDamageCause.EntityAttack, (int)count, true, false);
+				try {
+					a.hurt(p, ActorDamageCause.EntityAttack, (int)count, true, false);
+				} catch(AccessViolationException) {
+					Console.WriteLine("[RandSkill] An AccessViolationException err.");	// 指针访问异常，跳过；实际无法捕获此异常
+				}
 			}
 		}
 		// 执行效果处理
@@ -137,6 +142,18 @@ namespace RandomSkillUp
 				a.Effects = str;
 			}
 		}
+		// 锁定伤害技能特效，1秒内只能发动一次
+		private bool blockhurt(IntPtr p) {
+			var st = DateTime.Now;
+			if (skillDelaysTimer[p] != null) {
+				var lasttime = (DateTime)skillDelaysTimer[p];
+				if (lasttime.AddSeconds(1).CompareTo(st) > 0) {
+					return false;
+				}
+			}
+			skillDelaysTimer[p] = st;
+			return true;
+		}
 		
 		/// <summary>
 		/// 返回一个处理技能用的监听器
@@ -147,6 +164,11 @@ namespace RandomSkillUp
 				atk = x => {
 					var e = BaseEvent.getFrom(x) as AttackEvent;
 					if (e != null) {
+						// 技能仅适用于生物
+						CsActor ca = new CsActor(mapi, e.attackedentityPtr);
+						if ((ca.TypeId & 0x100) != 0x100) {
+							return true;
+						}
 						int len = (skilllist != null ? skilllist.Count : 0);
 						if (len > 0) {
 							// 进入技能选择器
@@ -166,6 +188,7 @@ namespace RandomSkillUp
 										{
 											switch(s.basehurt) {
 												case 0:		// 固定伤害
+													if (blockhurt(e.playerPtr))
 													{
 														int count = s.hurtcount;
 														bool isdamage = (count >= 0);
@@ -175,38 +198,42 @@ namespace RandomSkillUp
 													}
 													break;
 												case 1:		// 基础伤害，需要发起伤害监听
+													if (blockhurt(e.playerPtr))
 													{
 														MCCSAPI.EventCab hurtlis = null;
 														hurtlis = (hx) => {
 															var he = BaseEvent.getFrom(hx) as MobHurtEvent;
-															if (he != null) {
+															if (he != null && he.RESULT) {
 																if (he.mobPtr == e.attackedentityPtr) {
 																	// 进入target循环检索
-																	mapi.removeBeforeActListener(EventKey.onMobHurt, hurtlis);
-																	bool ret = true;
+																	mapi.removeAfterActListener(EventKey.onMobHurt, hurtlis);
+																	const bool ret = true;
 																	int count = (int)((float)(he.dmcount) * (float)(s.hurtcount) / 100.0f);
 																	//bool isdamage = (count >= 0);
+																	targets.Remove(he.mobPtr);
 																	foreach (IntPtr ap in targets) {
-																		if (ap == he.mobPtr) {
-																			ret = false;
-																			new Thread(() => {
-																				Thread.Sleep(20);	// 拦截旧伤害并延时发动对目标的新伤害
-																				doHurt(e.playerPtr, ap, count);
-																			}).Start();
-																		} else {
-																			doHurt(e.playerPtr, ap, count);
-																		}
+//																		if (ap == he.mobPtr) {
+//																			ret = false;
+//																			new Thread(() => {
+//																				Thread.Sleep(20);	// 拦截旧伤害并延时发动对目标的新伤害
+//																				doHurt(e.playerPtr, ap, count);
+//																			}).Start();
+//																		} else {
+//																			doHurt(e.playerPtr, ap, count);
+//																		}
+																		doHurt(e.playerPtr, ap, count);
 																	}
 																	return ret;
 																}
 															}
 															return true;
 														};
-														mapi.addBeforeActListener(EventKey.onMobHurt, hurtlis);
+														mapi.addAfterActListener(EventKey.onMobHurt, hurtlis);
 														new Thread(() => {				// 延时1秒移除本次伤害监听
 															Thread.Sleep(1000);
-															if (mapi.removeBeforeActListener(EventKey.onMobHurt, hurtlis)) {
-															}
+															mapi.postTick(() => {
+															if (mapi.removeAfterActListener(EventKey.onMobHurt, hurtlis)) {
+															}});
 														}).Start();
 													}
 													break;
