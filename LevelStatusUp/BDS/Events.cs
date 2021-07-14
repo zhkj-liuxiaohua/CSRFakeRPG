@@ -142,6 +142,34 @@ namespace CSR
 		/// onMobSpawnCheck - 生物生成检查事件
 		/// </summary>
 		public const string onMobSpawnCheck = "onMobSpawnCheck";
+		/// <summary>
+		/// onDropItem - 玩家丢物品事件
+		/// </summary>
+		public const string onDropItem = "onDropItem";
+		/// <summary>
+		/// onPickUpItem - 玩家捡起物品事件
+		/// </summary>
+		public const string onPickUpItem = "onPickUpItem";
+		/// <summary>
+		/// onScoreChanged - 计分板数值改变事件
+		/// </summary>
+		public const string onScoreChanged = "onScoreChanged";
+		/// <summary>
+		/// onScriptEngineInit - 官方脚本引擎初始化
+		/// </summary>
+		public const string onScriptEngineInit = "onScriptEngineInit";
+		/// <summary>
+		/// onScriptEngineLog - 官方脚本接收到日志
+		/// </summary>
+		public const string onScriptEngineLog = "onScriptEngineLog";
+		/// <summary>
+		/// onScriptEngineCmd - 官方脚本引擎执行指令
+		/// </summary>
+		public const string onScriptEngineCmd = "onScriptEngineCmd";
+		/// <summary>
+		/// onScoreboardInit - 系统计分板初始化
+		/// </summary>
+		public const string onScoreboardInit = "onScoreboardInit";
 	}
 
 	public enum EventType {
@@ -176,7 +204,14 @@ namespace CSR
 		onLevelUp = 28,
 		onPistonPush = 29,
 		onChestPair = 30,
-		onMobSpawnCheck = 31
+		onMobSpawnCheck = 31,
+		onDropItem = 32,
+		onPickUpItem = 33,
+		onScoreChanged = 34,
+		onScriptEngineInit = 35,
+		onScriptEngineLog = 36,
+		onScriptEngineCmd = 37,
+		onScoreboardInit = 38
 	}
 
 	public enum ActMode {
@@ -230,10 +265,10 @@ namespace CSR
 
 	[StructLayoutAttribute(LayoutKind.Sequential)]
 	public struct Std_String {
-		public IntPtr data;
-		public ulong sd;
-		public ulong len;
-		public ulong uk3;
+		public IntPtr data;			// 数据区
+		public ulong sd;			// 短数据复用区
+		public ulong len;			// 字符串长度
+		public ulong alloclen;		// 实占空间
 	}
 
 
@@ -266,7 +301,7 @@ namespace CSR
 			{
 				if (s.len < 1)
 					return String.Empty;
-				if (s.len < 16)
+				if (s.alloclen < 16)
 				{
 					byte[] c = BitConverter.GetBytes((ulong)s.data);
 					byte[] d = BitConverter.GetBytes(s.sd);
@@ -376,6 +411,20 @@ namespace CSR
 						return ChestPairEvent.getFrom(e);
 					case EventType.onMobSpawnCheck:
 						return MobSpawnCheckEvent.getFrom(e);
+					case EventType.onPickUpItem:
+						return PickUpItemEvent.getFrom(e);
+					case EventType.onDropItem:
+						return DropItemEvent.getFrom(e);
+					case EventType.onScoreChanged:
+						return ScoreChangedEvent.getFrom(e);
+					case EventType.onScriptEngineInit:
+						return ScriptEngineInitEvent.getFrom(e);
+					case EventType.onScriptEngineLog:
+						return ScriptEngineLogEvent.getFrom(e);
+					case EventType.onScriptEngineCmd:
+						return ScriptEngineCmdEvent.getFrom(e);
+					case EventType.onScoreboardInit:
+						return ScoreboardInitEvent.getFrom(e);
 					default:
 						// do nothing
 						break;
@@ -1113,6 +1162,7 @@ namespace CSR
 		protected int mentityid;
 		protected int mdimensionid;
 		protected IntPtr mnpc;
+		protected IntPtr mtrigger;
 		/// <summary>
 		/// NPC名字
 		/// </summary>
@@ -1149,6 +1199,10 @@ namespace CSR
 		/// NPC指针
 		/// </summary>
 		public IntPtr npcPtr { get { return mnpc; } }
+		/// <summary>
+		/// 触发者（玩家）指针
+		/// </summary>
+		public IntPtr triggerPtr { get { return mtrigger; } }
 		public static new NpcCmdEvent getFrom(Events e)
 		{
 			var le = createHead(e, EventType.onNpcCmd, typeof(NpcCmdEvent)) as NpcCmdEvent;
@@ -1164,6 +1218,7 @@ namespace CSR
 			le.mentityid = Marshal.ReadInt32(s, 48);
 			le.mdimensionid = Marshal.ReadInt32(s, 52);
 			le.mnpc = Marshal.ReadIntPtr(s, 56);
+			le.mtrigger = Marshal.ReadIntPtr(s, 64);
 			return le;
 		}
 	}
@@ -1259,6 +1314,7 @@ namespace CSR
 		protected string mactortype;
 		protected Vec3 mactorpos;
 		protected IntPtr mattacked;
+		protected int mdmcase;
 		/// <summary>
 		/// 被攻击实体名称
 		/// </summary>
@@ -1275,6 +1331,10 @@ namespace CSR
 		/// 被击者实体指针
 		/// </summary>
 		public IntPtr attackedentityPtr { get { return mattacked; } }
+		/// <summary>
+		/// 伤害类型
+		/// </summary>
+		public int dmcase { get { return mdmcase; } }
 		public static new AttackEvent getFrom(Events e)
 		{
 			var ate = createHead(e, EventType.onAttack, typeof(AttackEvent)) as AttackEvent;
@@ -1287,6 +1347,7 @@ namespace CSR
 			ate.mactorpos = (Vec3)Marshal.PtrToStructure(s + 56, typeof(Vec3));
 			ate.mplayer = Marshal.ReadIntPtr(s, 72);
 			ate.mattacked = Marshal.ReadIntPtr(s, 80);
+			ate.mdmcase = Marshal.ReadInt32(s, 88);
 			return ate;
 		}
 	}
@@ -1573,6 +1634,205 @@ namespace CSR
 			pe.mdimensionid = Marshal.ReadInt32(s, 36);
 			pe.mmob = (IntPtr)Marshal.ReadInt64(s, 40);
 			return pe;
+		}
+	}
+	/// <summary>
+	/// 玩家拾取物品监听<br/>
+	/// 拦截可否：是
+	/// </summary>
+	public class PickUpItemEvent : PlayerEvent
+    {
+		protected string mitemname;
+		protected short mitemid;
+		protected short mitemaux;
+		/// <summary>
+		/// 物品名称
+		/// </summary>
+		public string itemname { get { return mitemname; } }
+		/// <summary>
+		/// 物品ID
+		/// </summary>
+		public short itemid { get { return mitemid; } }
+		/// <summary>
+		/// 物品特殊值
+		/// </summary>
+		public short itemaux { get { return mitemaux; } }
+
+		public static new PickUpItemEvent getFrom(Events e)
+		{
+			var puie = createHead(e, EventType.onPickUpItem, typeof(PickUpItemEvent)) as PickUpItemEvent;
+			if (puie == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			puie.loadData(s);
+			puie.mitemname = StrTool.readUTF8str((IntPtr)Marshal.ReadInt64(s, 40));
+			puie.mitemid = Marshal.ReadInt16(s, 48);
+			puie.mitemaux = Marshal.ReadInt16(s, 50);
+			puie.mplayer = Marshal.ReadIntPtr(s, 56);
+			return puie;
+		}
+	}
+	/// <summary>
+	/// 玩家掉落物品监听<br/>
+	/// 拦截可否：是
+	/// </summary>
+	public class DropItemEvent : PlayerEvent {
+		protected string mitemname;
+		protected short mitemid;
+		protected short mitemaux;
+		/// <summary>
+		/// 物品名称
+		/// </summary>
+		public string itemname { get { return mitemname; } }
+		/// <summary>
+		/// 物品ID
+		/// </summary>
+		public short itemid { get { return mitemid; } }
+		/// <summary>
+		/// 物品特殊值
+		/// </summary>
+		public short itemaux { get { return mitemaux; } }
+
+		public static new DropItemEvent getFrom(Events e)
+		{
+			var puie = createHead(e, EventType.onDropItem, typeof(DropItemEvent)) as DropItemEvent;
+			if (puie == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			puie.loadData(s);
+			puie.mitemname = StrTool.readUTF8str((IntPtr)Marshal.ReadInt64(s, 40));
+			puie.mitemid = Marshal.ReadInt16(s, 48);
+			puie.mitemaux = Marshal.ReadInt16(s, 50);
+			puie.mplayer = Marshal.ReadIntPtr(s, 56);
+			return puie;
+		}
+	}
+	/// <summary>
+	/// 计分板分数改变监听<br/>
+	/// 拦截可否：否
+	/// </summary>
+	public class ScoreChangedEvent : BaseEvent
+	{
+		protected string mobjectivename;
+		protected string mdisplayname;
+		protected long mscoreboardid;
+		protected int mscore;
+		/// <summary>
+		/// 计分板名称
+		/// </summary>
+		public string objectivename { get { return mobjectivename; } }
+		/// <summary>
+		/// 计分板显示名
+		/// </summary>
+		public string displayname { get { return mdisplayname; } }
+		/// <summary>
+		/// 计分板ID值
+		/// </summary>
+		public long scoreboardid { get { return mscoreboardid; } }
+		/// <summary>
+		/// 分数
+		/// </summary>
+		public int score { get { return mscore; } }
+
+		public static new ScoreChangedEvent getFrom(Events e)
+		{
+			var sce = createHead(e, EventType.onScoreChanged, typeof(ScoreChangedEvent)) as ScoreChangedEvent;
+			if (sce == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			sce.mobjectivename = StrTool.readUTF8str((IntPtr)Marshal.ReadInt64(s, 0));
+			sce.mdisplayname = StrTool.readUTF8str((IntPtr)Marshal.ReadInt64(s, 8));
+			sce.mscoreboardid = Marshal.ReadInt64(s, 16);
+			sce.mscore = Marshal.ReadInt32(s, 24);
+			return sce;
+		}
+	}
+
+	/// <summary>
+	/// 官方脚本引擎初始化监听<br/>
+	/// 拦截可否：否
+	/// </summary>
+	public class ScriptEngineInitEvent : BaseEvent
+    {
+		protected IntPtr mjseptr;
+		/// <summary>
+		/// 脚本引擎指针
+		/// </summary>
+		public IntPtr jseptr { get { return mjseptr; } }
+		public static new ScriptEngineInitEvent getFrom(Events e)
+		{
+			var sce = createHead(e, EventType.onScriptEngineInit, typeof(ScriptEngineInitEvent)) as ScriptEngineInitEvent;
+			if (sce == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			sce.mjseptr = Marshal.ReadIntPtr(s, 0);
+			return sce;
+		}
+	}
+
+	/// <summary>
+	/// 官方脚本引擎接收日志信息监听<br/>
+	/// 拦截可否：是
+	/// </summary>
+	public class ScriptEngineLogEvent : ScriptEngineInitEvent
+    {
+		protected string mlog;
+		/// <summary>
+		/// 官方脚本引擎输出信息（当脚本引擎开启日志功能时可捕获此内容）
+		/// </summary>
+		public string log { get { return mlog; } }
+		public static new ScriptEngineLogEvent getFrom(Events e)
+		{
+			var sce = createHead(e, EventType.onScriptEngineLog, typeof(ScriptEngineLogEvent)) as ScriptEngineLogEvent;
+			if (sce == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			sce.mjseptr = Marshal.ReadIntPtr(s, 0);
+			sce.mlog = StrTool.readUTF8str(Marshal.ReadIntPtr(s, 8));
+			return sce;
+		}
+	}
+	/// <summary>
+	/// 官方脚本引擎执行指令监听<br/>
+	/// 拦截可否：是
+	/// </summary>
+	public class ScriptEngineCmdEvent : ScriptEngineInitEvent
+	{
+		protected string mcmd;
+		/// <summary>
+		/// 官方脚本引擎执行指令
+		/// </summary>
+		public string cmd { get { return mcmd; } }
+		public static new ScriptEngineCmdEvent getFrom(Events e)
+		{
+			var sce = createHead(e, EventType.onScriptEngineCmd, typeof(ScriptEngineCmdEvent)) as ScriptEngineCmdEvent;
+			if (sce == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			sce.mjseptr = Marshal.ReadIntPtr(s, 0);
+			sce.mcmd = StrTool.readUTF8str(Marshal.ReadIntPtr(s, 8));
+			return sce;
+		}
+	}
+	/// <summary>
+	/// 系统计分板初始化监听<br/>
+	/// 拦截可否：否
+	/// </summary>
+	public class ScoreboardInitEvent : BaseEvent
+	{
+		protected IntPtr mscptr;
+		/// <summary>
+		/// 系统计分板指针
+		/// </summary>
+		public IntPtr scptr { get { return mscptr; } }
+		public static new ScoreboardInitEvent getFrom(Events e)
+		{
+			var sce = createHead(e, EventType.onScoreboardInit, typeof(ScoreboardInitEvent)) as ScoreboardInitEvent;
+			if (sce == null)
+				return null;
+			IntPtr s = e.data;  // 此处为转换过程
+			sce.mscptr = Marshal.ReadIntPtr(s, 0);
+			return sce;
 		}
 	}
 }

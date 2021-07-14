@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using CSR;
 using System.Web.Script.Serialization;
@@ -117,6 +118,8 @@ namespace RandomSkillUp
 		}
 		// 执行伤害处理
 		private void doHurt(IntPtr p, IntPtr ap, float count) {
+			if (ap == IntPtr.Zero || Marshal.ReadByte(ap, 993) == 1)	// IDA Actor::remove
+				return;
 			bool isdamage = (count >= 0);
 			CsActor a = new CsActor(mapi, ap);
 			if ((a.TypeId & 0x100) == 0x100) {	// 是生物
